@@ -1,0 +1,66 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> >>
+endobj
+4 0 obj
+<< /Length 1648 >>
+stream
+0.00 g BT /F2 18 Tf 54 740 Td (Brightline Studio Ltd) Tj ET
+0.35 g BT /F1 10 Tf 54 716 Td (14 Hoxton Square) Tj ET
+0.35 g BT /F1 10 Tf 54 702 Td (London N1 6NU) Tj ET
+0.35 g BT /F1 10 Tf 54 688 Td (United Kingdom) Tj ET
+0.00 g BT /F2 18 Tf 430 740 Td (INVOICE) Tj ET
+0.35 g BT /F1 9 Tf 430 700 Td (Invoice number) Tj ET
+0.00 g BT /F1 11 Tf 430 688 Td (INV-demo-7) Tj ET
+0.35 g BT /F1 9 Tf 430 684 Td (Invoice date) Tj ET
+0.00 g BT /F1 11 Tf 430 672 Td (15 September 2026) Tj ET
+0.35 g BT /F1 9 Tf 430 668 Td (Due date) Tj ET
+0.00 g BT /F1 11 Tf 430 656 Td (15 October 2026) Tj ET
+0.75 G 54 660 m 558 660 l S 0 G
+0.35 g BT /F1 9 Tf 54 636 Td (Bill to) Tj ET
+0.00 g BT /F2 11 Tf 54 618 Td (Harbor Trading Co.) Tj ET
+0.00 g BT /F1 11 Tf 54 604 Td (200 Market Street) Tj ET
+0.00 g BT /F1 11 Tf 54 590 Td (San Francisco, CA 94105) Tj ET
+0.00 g BT /F1 11 Tf 54 576 Td (United States) Tj ET
+0.75 G 54 540 m 558 540 l S 0 G
+0.35 g BT /F2 9 Tf 54 522 Td (Description) Tj ET
+0.35 g BT /F2 9 Tf 430 522 Td (Amount) Tj ET
+0.75 G 54 512 m 558 512 l S 0 G
+0.00 g BT /F1 11 Tf 54 490 Td (Brand guidelines, one round of revisions) Tj ET
+0.00 g BT /F1 11 Tf 430 490 Td (3,450.00 GBP) Tj ET
+0.75 G 54 472 m 558 472 l S 0 G
+0.00 g BT /F2 11 Tf 320 446 Td (Total due) Tj ET
+0.00 g BT /F2 12 Tf 430 446 Td (3,450.00 GBP) Tj ET
+0.35 g BT /F1 9 Tf 54 390 Td (Please pay by) Tj ET
+0.00 g BT /F2 11 Tf 54 372 Td (Bank transfer) Tj ET
+0.00 g BT /F1 11 Tf 54 358 Td (Sort code 04-00-04) Tj ET
+0.00 g BT /F1 11 Tf 54 344 Td (Account 48362719) Tj ET
+0.45 g BT /F1 9 Tf 54 72 Td (Sample invoice for the payout demo. Not a demand for payment.) Tj ET
+0.75 G 54 60 m 558 60 l S 0 G
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+6 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>
+endobj
+xref
+0 7
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000251 00000 n 
+0000001951 00000 n 
+0000002021 00000 n 
+trailer << /Size 7 /Root 1 0 R >>
+startxref
+2096
+%%EOF

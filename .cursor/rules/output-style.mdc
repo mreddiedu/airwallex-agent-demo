@@ -1,0 +1,11 @@
+---
+description: How to communicate in this project
+alwaysApply: true
+---
+
+# Output Style
+
+- Keep answers short and plain. No verbosity, no filler.
+- Prefer working code over explanation.
+- The user is new to Cursor IDE. When introducing a Cursor feature, say in one
+  line what it is and where to click.

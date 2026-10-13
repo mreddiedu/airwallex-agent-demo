@@ -1,0 +1,52 @@
+---
+description: Airwallex sandbox API conventions and known gotchas
+alwaysApply: true
+---
+
+# Airwallex Sandbox API
+
+Base URL `https://api.sandbox.airwallex.com`, paths start with `/api/v1`.
+Docs: https://www.airwallex.com/docs/api
+
+## Auth
+
+`POST /api/v1/authentication/login` with headers `x-client-id` and `x-api-key`,
+no body. Returns a 30-minute bearer token. Cache it and reuse until
+`expires_at`; never re-login per request. Send as `Authorization: Bearer <token>`.
+
+## Conventions that cause silent bugs
+
+- **Amounts are major units.** `100` means one hundred dollars, not one dollar.
+- **`request_id` must be a fresh UUID per operation.** Reuse it only to retry
+  the same operation. Reusing within 7 days returns `duplicate_request_id`.
+  Transfers reject ids under 10 or over 50 chars (code `018`).
+- Transfers take `transfer_currency` / `transfer_amount`. Sending
+  `payment_currency` returns code `001`.
+- Leave `x-api-version` **off** all FX calls, else `incorrect_version`.
+- A rate is not a quote: read `rate` from a rate check, `client_rate` from a quote.
+- FX quotes are single-use. Get a fresh quote per conversion.
+
+## State machines
+
+- Failed transfers end in **`CANCELLED`**, never `FAILED`. Read `failure_type`
+  and `failure_reason`. `SENT` is in-flight, never final.
+- Simulated `FAILED` auto-cancels in seconds, so branch on both `FAILED` and
+  `CANCELLED` or you lose `failure_reason`.
+- Declined card transactions end in `FAILED`. Keep card and transfer state
+  machines separate.
+
+## Before building a beneficiary payload
+
+Call `POST /api/v1/beneficiaries/schema` for the target country + currency.
+Fields differ per corridor. Wrap validation as
+`{"beneficiary": {...}, "transfer_methods": ["LOCAL"]}` — `transfer_methods`,
+not `payment_methods`.
+
+## Other
+
+- Rate limits: 20 req/s global, 10 per endpoint, 10 concurrent. No parallel
+  bursts during a live demo.
+- SWIFT payouts cost a flat fee (EUR 12.85) from the same wallet; LOCAL is free.
+  Add one fee per payout when sizing a conversion.
+- Deposit simulation reports `PENDING` but posts immediately. Re-read balances.
+- Test card `4035501000000008`, any future expiry, any CVC.

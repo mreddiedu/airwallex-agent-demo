@@ -1,0 +1,20 @@
+---
+description: Start the demo server with unrestricted network so Airwallex and Anthropic are reachable
+alwaysApply: true
+---
+
+# Demo server
+
+Airwallex and Anthropic are not on the sandbox proxy allowlist. A server
+started in the default shell gets `httpx.ProxyError: 403 Forbidden` on login,
+and the chat shows a failed request.
+
+Start and restart uvicorn with `required_permissions: ["all"]` so the sandbox
+proxy is not injected. Run this from the project root:
+
+```bash
+.venv/bin/python -m uvicorn app.main:app --reload --port 8000
+```
+
+A terminal the user opens themselves is also fine. Do not start this server
+in the default sandbox.

@@ -1,0 +1,2029 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Payout Copilot</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Michroma&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #070707; --panel: #101010; --panel-2: #161616; --line: rgba(255,255,255,.12);
+    --text: #ecece8; --muted: #8d8d88; --faint: #5a5a56;
+    --accent: #ff5c39; --accent-2: #8ebfd4;
+    --gold: #ff5c39; --warn: #ff5c39; --ok: #8ebfd4; --bad: #ff8f86;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; height: 100vh; display: flex; color: var(--text);
+    font: 15px/1.5 Outfit, "Helvetica Neue", Helvetica, Arial, sans-serif;
+    background-color: var(--bg);
+    background-image:
+      radial-gradient(880px 460px at 0% -12%, rgba(255,92,57,.16), transparent 58%),
+      radial-gradient(640px 380px at 100% 0%, rgba(142,191,212,.09), transparent 52%),
+      radial-gradient(rgba(255,255,255,.05) 1px, transparent 1px);
+    background-size: auto, auto, 22px 22px;
+  }
+  main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  header {
+    padding: 16px 22px; display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    border-bottom: 1px solid var(--line);
+    background: rgba(7,7,7,.82); backdrop-filter: blur(10px);
+  }
+  .brand { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  header h1 {
+    font-family: Michroma, Outfit, sans-serif; font-size: 13px; margin: 0; font-weight: 400;
+    letter-spacing: .08em; text-transform: uppercase; user-select: none;
+  }
+  header h1::before {
+    content: ""; display: inline-block; width: 10px; height: 10px; margin-right: 10px;
+    border-radius: 99px; background: var(--accent);
+    box-shadow: 0 0 14px rgba(255,92,57,.75); vertical-align: 1px;
+  }
+  .sub { color: var(--muted); font-size: 12px; }
+  .live {
+    font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--accent); border: 1px solid rgba(255,92,57,.4); background: rgba(255,92,57,.1);
+    padding: 4px 9px; border-radius: 99px;
+  }
+  #log { flex: 1; overflow-y: auto; padding: 22px; display: flex; flex-direction: column; gap: 14px; }
+  form { display: flex; gap: 10px; padding: 14px 22px 8px; }
+  main.dropping #log {
+    outline: 2px dashed rgba(255,92,57,.6); outline-offset: -10px;
+    background: rgba(255,92,57,.04); border-radius: 18px;
+  }
+  #chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 22px 16px; }
+  #chips button {
+    background: transparent; color: var(--muted); border: 1px solid var(--line);
+    padding: 7px 12px; font-size: 11px; border-radius: 99px; box-shadow: none;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    letter-spacing: .01em;
+  }
+  #chips button:hover { color: var(--text); border-color: rgba(255,92,57,.55); background: rgba(255,92,57,.08); filter: none; }
+  #chips button.enter { animation: bal-in 1.6s ease both; }
+  input[type=text] {
+    flex: 1; background: rgba(255,255,255,.03); border: 1px solid var(--line); color: var(--text);
+    padding: 12px 14px; border-radius: 12px; font-size: 15px; font-family: inherit;
+  }
+  input[type=text]:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(255,92,57,.22); }
+  button {
+    background: var(--accent); color: #140806; border: 0;
+    padding: 11px 18px; border-radius: 12px; font-size: 14px; font-weight: 650; cursor: pointer;
+    font-family: inherit; box-shadow: 0 8px 22px rgba(255,92,57,.22);
+  }
+  button:hover { filter: brightness(1.06); }
+  button.ghost { background: transparent; border: 1px solid var(--line); color: var(--muted); box-shadow: none; }
+  button.ghost:hover { color: var(--text); border-color: rgba(255,255,255,.28); }
+  button:disabled { opacity: .45; cursor: default; filter: none; box-shadow: none; }
+
+  .msg { max-width: 74%; padding: 12px 14px; border-radius: 16px; white-space: pre-wrap; }
+  .msg.me {
+    align-self: flex-end; color: #140806; font-weight: 600;
+    background: var(--accent);
+    border-bottom-right-radius: 5px;
+  }
+  .msg.bot {
+    align-self: flex-start; background: rgba(255,255,255,.03);
+    border: 1px solid var(--line); border-bottom-left-radius: 5px;
+    animation: msg-in .32s ease both;
+  }
+  .msg.bot:not(.receipt) {
+    background: rgba(255,92,57,.07);
+    border-color: rgba(255,92,57,.22);
+  }
+  .msg.typing {
+    display: flex; gap: 5px; align-items: center; width: fit-content;
+    min-height: 38px; padding: 12px 14px;
+  }
+  .msg.typing span {
+    width: 6px; height: 6px; border-radius: 50%; background: var(--accent);
+    animation: typing 1s infinite ease-in-out;
+  }
+  .msg.typing span:nth-child(2) { animation-delay: .15s; }
+  .msg.typing span:nth-child(3) { animation-delay: .3s; }
+  @keyframes typing {
+    0%, 60%, 100% { opacity: .25; transform: translateY(0); }
+    30% { opacity: 1; transform: translateY(-2px); }
+  }
+  @keyframes msg-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: none; }
+  }
+  .msg.receipt { max-width: 28rem; white-space: normal; }
+  .msg.receipt .fees { margin-top: 4px; }
+  .msg.receipt .who { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .msg.receipt .hint { margin: 10px 0 0; color: var(--muted); font-size: 13px; }
+  .msg.receipt .bal { display: flex; flex-direction: column; gap: 12px; margin-top: 14px; }
+  .msg.receipt .bal-row { display: flex; align-items: baseline; justify-content: space-between; gap: 18px; }
+  .msg.receipt .bal-row .ccy { min-width: 5.6rem; font-weight: 560; letter-spacing: .01em; }
+  .msg.receipt .bal-row .amt {
+    margin-left: auto; display: inline-flex; align-items: baseline; justify-content: flex-end;
+    gap: 10px; flex: none; white-space: nowrap; text-align: right;
+    font-variant-numeric: tabular-nums; font-weight: 560;
+  }
+  .rollnum {
+    --digit: 1.2em;
+    display: inline-flex; align-items: flex-start; flex-wrap: nowrap;
+    height: var(--digit); line-height: var(--digit); overflow: hidden;
+    font-variant-numeric: tabular-nums; vertical-align: bottom;
+  }
+  .tick-col { flex: 0 0 auto; height: var(--digit); line-height: var(--digit); overflow: hidden; text-align: center; }
+  .tick-strip { display: block; transition: transform 2.6s cubic-bezier(.16,.84,.32,1); }
+  .tick-strip > span, .tick-col > span { display: block; height: var(--digit); line-height: var(--digit); }
+  .msg.receipt .delta { color: var(--accent); font-style: normal; font-size: 11px; font-weight: 500; }
+  .msg.receipt .delta.up { color: #3dd68c; }
+  .msg.receipt .delta.wait { opacity: 0; }
+  .msg.receipt .delta.show { animation: delta-in 2.2s ease both; }
+  @keyframes delta-in { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes bal-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: none; }
+  }
+  .msg.receipt.listy { max-width: 36rem; }
+  .msg.receipt.listy.history { max-width: 39.6rem; }
+  .msg.receipt.listy .fees { max-width: none; }
+  .msg.receipt.listy .fees .line > span:last-child { white-space: nowrap; }
+  .msg.receipt .fade-line { animation: bal-in 1.6s ease both; }
+  .msg.receipt .fees .lbl { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; }
+  .msg.receipt .fees .lbl-top { display: flex; align-items: baseline; gap: 8px; white-space: nowrap; }
+  .co-flag { font-style: normal; }
+  .msg.receipt .fade-line .subline {
+    margin: 1px 0 8px; color: var(--muted); font-size: 11px; letter-spacing: 0;
+    text-transform: none; overflow-wrap: anywhere;
+  }
+  .msg.receipt .fees .tag {
+    margin-left: 8px; color: var(--accent); font-style: normal; font-size: 10px;
+    letter-spacing: .06em; text-transform: uppercase;
+  }
+  .msg.receipt .fees .st-ok { color: #3dd68c; font-weight: 650; }
+  .msg.receipt .fees .st-go { color: var(--accent-2); font-weight: 650; }
+  .msg.receipt .fees .st-bad { color: var(--bad); font-weight: 650; }
+  .rail { display: inline-flex; align-items: center; gap: 3px; margin-left: auto; flex: none; }
+  .rail i {
+    width: 14px; height: 3px; border-radius: 99px; background: rgba(255,255,255,.14);
+    transition: background-color .55s ease;
+  }
+  .rail i.on { background: var(--accent-2); }
+  .rail i.in, .rail em.in { animation: seg-in .7s ease; }
+  @keyframes seg-in { from { opacity: 0; } to { opacity: 1; } }
+  .rail[data-state="ok"] i.on { background: #3dd68c; }
+  .rail[data-state="bad"] i.on { background: var(--bad); }
+  .rail em {
+    margin-left: 6px; font-style: normal; font-size: 11px; letter-spacing: .04em;
+    text-transform: uppercase; font-weight: 650; color: var(--accent-2);
+  }
+  .rail[data-state="ok"] em { color: #3dd68c; }
+  .rail[data-state="bad"] em { color: var(--bad); }
+  .msg.receipt .rail[data-state="go"] { animation: rail-breathe 3.6s ease-in-out infinite; }
+  @keyframes rail-breathe {
+    0%, 100% { opacity: 1; }
+    50% { opacity: .32; }
+  }
+  .fees .line.has-rail { align-items: center; }
+  .msg.receipt > .rail { display: flex; width: 100%; margin: 12px 0 0; }
+  .msg.receipt > .rail i { flex: 1; width: auto; height: 4px; }
+  .copy { position: relative; cursor: copy; border-radius: 4px; }
+  .copy:hover { background: rgba(142,191,212,.14); }
+  .copy:hover::after, .copy.copied::after {
+    content: 'Copy'; position: absolute; left: 50%; bottom: calc(100% + 4px);
+    transform: translateX(-50%); padding: 2px 6px; border-radius: 6px;
+    background: #161616; border: 1px solid var(--line); color: var(--fg);
+    font-size: 10px; letter-spacing: .04em; text-transform: uppercase;
+    white-space: nowrap; pointer-events: none; z-index: 2;
+  }
+  .copy.copied::after { content: 'Copied'; color: #3dd68c; }
+  @media (prefers-reduced-motion: reduce) {
+    .msg.receipt .fade-line, .msg.bot, .msg.typing span, #chips button.enter, .rail i.in, .rail em.in, .tick-strip, .msg.receipt .rail[data-state="go"], .msg.receipt .delta.show { animation: none; transition: none; }
+    .msg.receipt .delta.wait { opacity: 1; }
+  }
+  .msg.receipt .refid {
+    display: flex; align-items: baseline; gap: 8px; flex-wrap: nowrap;
+    margin: 12px 0 0; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px; color: var(--text);
+  }
+  .msg.receipt .refid > span:first-child {
+    display: inline; margin: 0; flex: none; color: var(--muted); font-size: 10px;
+    letter-spacing: .06em; text-transform: uppercase; font-family: Outfit, system-ui, sans-serif;
+  }
+  .msg.receipt .refid .copy { min-width: 0; overflow-wrap: anywhere; }
+  .msg.receipt .subline.refid { margin: 2px 0 8px; color: var(--text); }
+  .msg.err {
+    align-self: flex-start; background: rgba(255,107,107,.1); border: 1px solid rgba(255,107,107,.45);
+    animation: msg-in .32s ease both;
+  }
+
+  .pill { font-size: 11px; padding: 3px 9px; border-radius: 99px; font-weight: 700;
+          letter-spacing: .04em; text-transform: uppercase; }
+  .pill.hold { background: rgba(255,92,57,.14); color: var(--accent); }
+  .pill.ok { background: rgba(61,214,140,.16); color: #3dd68c; }
+  .fees {
+    display: flex; flex-direction: column; gap: 4px; margin-top: 12px;
+    max-width: 22rem; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 13px; font-variant-numeric: tabular-nums;
+  }
+  .fees .line { display: flex; align-items: baseline; color: var(--text); }
+  .fees .dots {
+    flex: 1; border-bottom: 1px dotted rgba(230,232,236,.5);
+    margin: 0 8px 3px; min-width: 12px;
+  }
+  .fees .line span:last-child { text-align: right; overflow-wrap: anywhere; }
+  .fees .line.total { font-weight: 650; color: var(--gold); }
+  .fees .line.total .dots { border-bottom-color: rgba(255,92,57,.75); }
+  #lockbar { display: none; margin: 0 22px 8px; padding: 10px 14px; border: 1px solid rgba(255,107,107,.5);
+             background: rgba(255,107,107,.1); border-radius: 12px; }
+  #lockbar.show { display: block; }
+  body.locked form,
+  body.locked #chips { pointer-events: none; }
+
+  #http {
+    position: relative;
+    display: flex; flex-direction: row; width: min(420px, 38vw); flex: 0 0 auto;
+    background: #070707; min-height: 0; overflow: hidden;
+    transition: width .22s ease;
+  }
+  #http.folded { width: 40px; }
+  #http.resizing { transition: none; }
+  #http-resize {
+    position: absolute; left: 0; top: 0; bottom: 0; width: 8px; z-index: 3;
+    margin: 0; padding: 0; border: 0; background: transparent;
+    cursor: col-resize; touch-action: none;
+  }
+  #http-resize::after {
+    content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 2px;
+    background: transparent;
+  }
+  #http-resize:hover::after,
+  #http.resizing #http-resize::after { background: rgba(255,92,57,.7); }
+  #http.folded #http-resize { display: none; }
+  #http-toggle {
+    flex: 0 0 40px; width: 40px; align-self: stretch; margin: 0; padding: 16px 0 0;
+    display: flex; justify-content: center; align-items: flex-start;
+    border: 0; border-left: 1px solid var(--line); border-radius: 0;
+    background: transparent; color: var(--muted); box-shadow: none;
+    font: 600 13px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  #http-toggle:hover { color: var(--accent); background: rgba(255,92,57,.1); filter: none; }
+  #http .http-body {
+    flex: 1; display: flex; flex-direction: column; min-width: 0; min-height: 0;
+    opacity: 1; transition: opacity .18s ease;
+  }
+  #http.folded .http-body { opacity: 0; visibility: hidden; pointer-events: none; }
+  #http .http-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 14px 10px; border-bottom: 1px solid var(--line);
+  }
+  #http h2 {
+    margin: 0; font-size: 11px; text-transform: uppercase; letter-spacing: .08em;
+    color: var(--muted); font-weight: 700;
+  }
+  #http-clear { padding: 4px 10px; font-size: 12px; border-radius: 8px; }
+  #http-list { flex: 1; overflow: auto; padding: 10px 12px 18px; }
+  .http-empty { color: var(--muted); font-size: 12px; padding: 8px 2px; }
+  .call { border: 1px solid var(--line); border-radius: 10px; margin-bottom: 8px; background: rgba(255,255,255,.03); }
+  .call.enter { animation: http-in .4s ease both; }
+  @keyframes http-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .call.enter { animation: none; }
+  }
+  .call > summary {
+    cursor: pointer; list-style: none; padding: 8px 10px; display: flex; gap: 8px;
+    align-items: baseline; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px;
+  }
+  .call > summary::-webkit-details-marker { display: none; }
+  .call > summary::before { content: "▸"; color: var(--muted); width: 10px; }
+  .call[open] > summary::before { content: "▾"; }
+  .call .when { color: var(--muted); font-size: 11px; white-space: nowrap; }
+  .call .method { color: var(--muted); font-weight: 700; }
+  .call .method.get { color: var(--accent-2); }
+  .call .method.post { color: var(--accent); }
+  .call .method.put { color: #e2b657; }
+  .call .method.patch { color: #3dd68c; }
+  .call .method.delete { color: var(--bad); }
+  .call .path { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+  .call .st { font-weight: 700; }
+  .call .st.ok { color: var(--ok); }
+  .call .st.warn { color: var(--warn); }
+  .call .st.bad { color: var(--bad); }
+  .call .llm {
+    flex: 0 0 auto; margin-left: auto; font-size: 9px; font-weight: 700;
+    letter-spacing: .08em; color: #d07bff;
+  }
+  .call .tool {
+    flex: 0 0 auto; font-size: 9px; font-weight: 700;
+    letter-spacing: .04em; color: #7ddec0;
+  }
+  .call .svc { font-size: 10px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+  .call .body { padding: 0 10px 10px; }
+  .call .sec { font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 6px 0 2px; }
+  .jrow { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; line-height: 1.45; overflow-wrap: anywhere; }
+  .call, .call .body, .jbody { min-width: 0; }
+  .jbody { margin-left: 14px; }
+  details.jobj > summary {
+    cursor: pointer; list-style: none; display: inline; color: var(--muted);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px;
+  }
+  details.jobj > summary::-webkit-details-marker { display: none; }
+  details.jobj > summary::before { content: "▸ "; color: var(--accent); }
+  details.jobj[open] > summary::before { content: "▾ "; }
+  .jk { color: var(--accent-2); }
+  .jv.string { color: #d7d3c8; }
+  .jv.number { color: var(--accent); }
+  .jv.boolean { color: var(--accent-2); }
+  .jv.null { color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="brand">
+      <h1>Payout Copilot</h1>
+      <span class="sub">I'll check with you before any money moves</span>
+    </div>
+    <span class="live">Sandbox</span>
+  </header>
+  <div id="log"></div>
+  <div id="lockbar"></div>
+  <form id="form">
+    <button type="button" id="attach" class="ghost" title="Upload up to 6 PDF invoices, or drop them on the chat">Upload</button>
+    <input id="input" type="text" autocomplete="off"
+           placeholder="e.g. Pay Acme Logistics €4,000 for invoice INV-1032" />
+    <button type="submit">Send</button>
+  </form>
+  <input id="invoice-files" type="file" accept="application/pdf,.pdf" multiple hidden />
+  <div id="chips">
+    <button type="button" class="enter" style="animation-delay:0ms" data-q="Pay Acme Logistics €4,000 for invoice {invoice}" data-invoice-for="Acme">Pay Acme €4,000</button>
+    <button type="button" class="enter" style="animation-delay:480ms" data-q="Send Northwind 1500 USD for {invoice}" data-invoice-for="Northwind">Pay Northwind $1,500</button>
+    <button type="button" data-q="What's the payout history?">History</button>
+    <button type="button" data-q="What's our balance?">Balances</button>
+    <button type="button" data-q="What's the supplier list?">Suppliers</button>
+  </div>
+</main>
+
+<aside id="http" class="folded">
+  <div id="http-resize" role="slider" aria-orientation="horizontal" aria-label="Resize HTTP console" aria-valuemin="220" aria-valuemax="1200" aria-valuenow="420" tabindex="0"></div>
+  <button type="button" id="http-toggle" aria-expanded="false" aria-label="Expand HTTP console" title="Expand">&lt;</button>
+  <div class="http-body" aria-hidden="true">
+    <div class="http-head">
+      <h2>HTTP</h2>
+      <button type="button" class="ghost" id="http-clear">Clear</button>
+    </div>
+    <div id="http-list"><div class="http-empty">Calls show up here.</div></div>
+  </div>
+</aside>
+
+<script>
+const log = document.getElementById('log');
+log.addEventListener('click', async (e) => {
+  const el = e.target.closest('[data-copy]');
+  if (!el) return;
+  try {
+    await navigator.clipboard.writeText(el.dataset.copy);
+  } catch (err) {
+    return;
+  }
+  el.classList.add('copied');
+  clearTimeout(el._copied);
+  el._copied = setTimeout(() => el.classList.remove('copied'), 900);
+});
+const form = document.getElementById('form');
+const input = document.getElementById('input');
+const sessionId = sessionStorage.sessionId || (sessionStorage.sessionId = crypto.randomUUID());
+let accountLocked = false;
+let pending = null;
+let queuedPlans = [];
+const confirmed = new Map();
+let pendingCancel = null;
+let yesTarget = 'payout';
+let shownPlanId = null;
+let receiptEl = null;
+let approvedEl = null;
+let pinMode = false;
+let pinDigits = '';
+let pinWord = '';
+let walletBalances = {};
+
+function applyLock(message) {
+  accountLocked = true;
+  exitPinMode();
+  document.body.classList.add('locked');
+  input.disabled = true;
+  input.placeholder = 'Account locked';
+  form.querySelectorAll('button').forEach((el) => { el.disabled = true; });
+  document.querySelectorAll('#chips button').forEach((el) => {
+    el.disabled = true;
+  });
+  const bar = document.getElementById('lockbar');
+  bar.textContent = message || 'Incorrect pin. Your account is locked. Please call System Admin at 1-800-GET-HELP to unlock.';
+  bar.classList.add('show');
+}
+
+function unlockAccount() {
+  accountLocked = false;
+  document.body.classList.remove('locked');
+  input.disabled = false;
+  input.placeholder = 'e.g. Pay Acme Logistics €4,000 for invoice INV-1032';
+  form.querySelectorAll('button').forEach((el) => { el.disabled = false; });
+  document.querySelectorAll('#chips button').forEach((el) => { el.disabled = false; });
+  const bar = document.getElementById('lockbar');
+  bar.textContent = '';
+  bar.classList.remove('show');
+}
+
+let titleClicks = 0;
+document.querySelector('header h1').addEventListener('click', async () => {
+  titleClicks += 1;
+  if (titleClicks < 3) return;
+  titleClicks = 0;
+  const res = await post('/api/admin/reset', {});
+  if (res.error) return;
+  const wasLocked = accountLocked || res.was_locked;
+  unlockAccount();
+  if (wasLocked) speak("You're back in. Whenever you're ready.");
+  refresh();
+});
+
+function say(text, cls) {
+  hideTyping();
+  const el = document.createElement('div');
+  el.className = `msg ${cls}`;
+  el.innerHTML = String(text)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/\n/g, '<br>');
+  log.appendChild(el);
+  log.scrollTop = log.scrollHeight;
+  return el;
+}
+
+let typingEl = null;
+let holdReceipt = false;
+let inBatch = false;
+
+function showTyping() {
+  if (typingEl) return;
+  const el = document.createElement('div');
+  el.className = 'msg bot typing';
+  el.innerHTML = '<span></span><span></span><span></span>';
+  log.appendChild(el);
+  log.scrollTop = log.scrollHeight;
+  typingEl = el;
+}
+
+function hideTyping() {
+  if (!typingEl) return;
+  typingEl.remove();
+  typingEl = null;
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function speak(text, cls = 'bot') {
+  const parts = String(text).split(/\n\n+/).map((part) => part.trim()).filter(Boolean);
+  for (let i = 0; i < parts.length; i++) {
+    showTyping();
+    await sleep(i === 0 ? 420 : 260);
+    say(parts[i], cls);
+  }
+}
+
+function statusRank(status) {
+  const name = String(status || '').toUpperCase();
+  const label = name ? name.charAt(0) + name.slice(1).toLowerCase() : 'Scheduled';
+  if (name === 'PAID') return { n: 4, state: 'ok', label: 'Paid' };
+  if (/^(CANCELLED|FAILED|REJECTED|RECALLED)$/.test(name)) return { n: 1, state: 'bad', label };
+  if (name === 'SENT' || name === 'DISPATCHED') return { n: 3, state: 'go', label: 'Sent' };
+  if (name === 'PROCESSING') return { n: 2, state: 'go', label: 'Processing' };
+  return { n: 1, state: 'go', label };
+}
+
+function paintStatus(el, status, animate) {
+  if (!el) return;
+  const info = statusRank(status);
+  const prev = Number(el.dataset.n || 0);
+  const next = String(status || '').toUpperCase();
+  const grew = Boolean(animate) && prev > 0 && info.n > prev;
+  el.dataset.state = info.state;
+  el.dataset.n = String(info.n);
+  el.dataset.status = next;
+  el.querySelectorAll('i').forEach((seg, i) => {
+    const on = i < info.n;
+    seg.classList.toggle('on', on);
+    if (grew && on && i >= prev) {
+      seg.classList.remove('in');
+      void seg.offsetWidth;
+      seg.classList.add('in');
+    }
+  });
+  const label = el.querySelector('em');
+  if (!label) return;
+  label.textContent = info.label;
+  if (!grew) return;
+  label.classList.remove('in');
+  void label.offsetWidth;
+  label.classList.add('in');
+}
+
+function statusRail(status, id) {
+  const el = document.createElement('div');
+  el.className = 'rail';
+  el.innerHTML = '<i></i><i></i><i></i><i></i><em></em>';
+  if (id) {
+    el.dataset.id = id;
+    status = showStatus(id, status);
+  }
+  paintStatus(el, status);
+  return el;
+}
+
+const knownStatus = new Map();
+const FINAL_STATUS = /^(PAID|CANCELLED|FAILED|REJECTED|RECALLED)$/;
+
+// One status per transfer. A final status is never undone by an older read.
+function showStatus(id, status) {
+  const given = String(status || '').toUpperCase();
+  const prev = knownStatus.get(id);
+  const next = prev && FINAL_STATUS.test(prev) && !FINAL_STATUS.test(given) ? prev : given;
+  knownStatus.set(id, next);
+  document.querySelectorAll('.rail[data-id]').forEach((rail) => {
+    if (rail.dataset.id !== id || rail.dataset.status === next) return;
+    paintStatus(rail, next, Boolean(rail.dataset.status));
+  });
+  return next;
+}
+
+// Every breathing rail shares the document clock, so they dim together.
+function syncBreath() {
+  if (!document.getAnimations) return;
+  document.getAnimations().forEach((a) => {
+    if (a.animationName === 'rail-breathe' && a.startTime !== 0) a.startTime = 0;
+  });
+}
+
+let breathQueued = false;
+new MutationObserver(() => {
+  if (breathQueued) return;
+  breathQueued = true;
+  requestAnimationFrame(() => {
+    breathQueued = false;
+    syncBreath();
+  });
+}).observe(document.getElementById('log'), {
+  childList: true, subtree: true, attributes: true, attributeFilter: ['data-state'],
+});
+
+function isTransferStatus(value) {
+  return /^(PAID|CANCELLED|FAILED|REJECTED|RECALLED|PROCESSING|SCHEDULED|SENT|DISPATCHED|NEW|OVERDUE)$/i.test(value);
+}
+
+function copySpan(text) {
+  return `<span class="copy" data-copy="${esc(text)}">${esc(text)}</span>`;
+}
+
+function countryFlag(code) {
+  const cc = String(code || '').trim().toUpperCase();
+  if (!/^[A-Z]{2}$/.test(cc)) return '';
+  return String.fromCodePoint(...[...cc].map((ch) => 0x1F1E6 + ch.charCodeAt(0) - 65));
+}
+
+function companyLabel(name, country, copy) {
+  const text = copy && name ? copySpan(name) : esc(name || '');
+  const flag = countryFlag(country);
+  return flag ? `${text}<span class="co-flag">${flag}</span>` : text;
+}
+
+function listLine(row) {
+  const wrap = document.createElement('div');
+  wrap.className = 'fade-line';
+  const line = document.createElement('div');
+  line.className = 'line';
+  const value = row.value ? String(row.value) : '';
+  const tag = row.tag ? `<em class="tag">${esc(row.tag)}</em>` : '';
+  const status = isTransferStatus(value);
+  if (status) line.classList.add('has-rail');
+  const tone = /^(PAID)$/i.test(value) ? 'st-ok'
+    : /^(CANCELLED|FAILED)$/i.test(value) ? 'st-bad'
+    : /^(PROCESSING|SCHEDULED|SENT)$/i.test(value) ? 'st-go' : '';
+  const shown = row.copy_value && value ? copySpan(value) : esc(value);
+  const tail = !status && value ? `<span class="dots"></span><span class="${tone}">${shown}</span>` : '';
+  const name = status
+    ? companyLabel(row.label || '', row.country, true)
+    : ((row.copy && row.label) ? copySpan(row.label) : esc(row.label || ''));
+  line.innerHTML = `<span class="lbl"><span class="lbl-top">${name}${tag}</span></span>${tail}`;
+  if (status) {
+    line.appendChild(statusRail(value, row.id));
+  }
+  wrap.appendChild(line);
+  if (row.when || row.money || row.invoice) {
+    const sub = document.createElement('div');
+    sub.className = 'subline';
+    const bits = [];
+    if (row.when) bits.push(copySpan(row.when));
+    if (row.money) bits.push(copySpan(row.money));
+    if (row.invoice) bits.push(copySpan(row.invoice));
+    sub.innerHTML = bits.join(' · ');
+    wrap.appendChild(sub);
+  } else if (row.sub) {
+    const sub = document.createElement('div');
+    sub.className = 'subline';
+    sub.textContent = row.sub;
+    wrap.appendChild(sub);
+  }
+  if (row.id && status) {
+    const ref = document.createElement('div');
+    ref.className = 'subline refid';
+    ref.innerHTML = `<span>Reference id</span>${copySpan(row.id)}`;
+    wrap.appendChild(ref);
+  }
+  return wrap;
+}
+
+const LINE_PAUSE = 480;
+const ROLL_MS = 2600;
+
+function motionOff() {
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+function amountWillRoll(node) {
+  if (!node || motionOff()) return false;
+  const from = Number(node.dataset.from);
+  const to = Number(node.dataset.to);
+  return Number.isFinite(from) && Number.isFinite(to) && Math.abs(to - from) >= 0.005;
+}
+
+async function revealLines(parent, nodes) {
+  const rolls = [];
+  for (let i = 0; i < nodes.length; i++) {
+    nodes[i].classList.add('fade-line');
+    parent.appendChild(nodes[i]);
+    const roll = nodes[i].querySelector && nodes[i].querySelector('.rollnum');
+    if (amountWillRoll(roll)) rolls.push(roll);
+    else if (roll) rollAmount(roll);
+    log.scrollTop = log.scrollHeight;
+    if (!motionOff() && nodes.length <= 16 && i < nodes.length - 1) await sleep(LINE_PAUSE);
+  }
+  if (!rolls.length) return;
+  if (!motionOff()) await sleep(LINE_PAUSE);
+  rolls.forEach(rollAmount);
+}
+
+async function followUp(note) {
+  if (note) await speak(note);
+}
+
+async function showList(res) {
+  if (res.kind === 'suppliers') return showSuppliers(res);
+  if (res.compact) return showBalances(res);
+  const rows = res.rows || [];
+  const el = document.createElement('div');
+  el.className = 'msg bot receipt listy history';
+  el.innerHTML = `<div class="who"><strong>${esc(res.title || '')}</strong></div><div class="fees"></div>`;
+  log.appendChild(el);
+  await revealLines(el.querySelector('.fees'), rows.map(listLine));
+  watchHistory(el);
+  await followUp(res.note);
+}
+
+function money(a, c) { return `${Number(a).toLocaleString(undefined, {minimumFractionDigits: 2})} ${c}`; }
+function moneyTight(a, c) {
+  return `${Number(a).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}${c}`;
+}
+
+function feeLines(plan) {
+  const rail = String(plan.corridor || '').split('/').pop().trim() || 'Transfer';
+  const rows = [
+    ['Invoice#:', plan.reference || ''],
+    ['Payout', moneyTight(plan.amount, plan.currency)],
+    [`${rail} fee`, moneyTight(plan.fee, plan.fee_currency)],
+    ['Total debit', money(plan.total_debit, plan.currency)],
+  ];
+  return rows.map(([label, value], i) => {
+    const line = document.createElement('div');
+    line.className = 'line' + (i === rows.length - 1 ? ' total' : '');
+    line.innerHTML = `<span>${esc(label)}</span><span class="dots"></span><span>${copySpan(value)}</span>`;
+    return line;
+  });
+}
+
+function esc(s) {
+  return String(s)
+    .replace(/&/g, '&amp;').replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function isYes(text) {
+  return /^(yes|yep|yeah|ok|okay|approve|approve and send|send it|go ahead|confirm|pay it|do it)\.?$/i.test(text.trim());
+}
+
+function isNo(text) {
+  return /^(no|nope|cancel|reject|stop|don't send|dont send|never mind|nevermind)\.?$/i.test(text.trim());
+}
+
+function exitPinMode() {
+  pinMode = false;
+  pinDigits = '';
+  pinWord = '';
+  if (accountLocked) return;
+  input.value = '';
+  input.placeholder = 'e.g. Pay Acme Logistics €4,000 for invoice INV-1032';
+}
+
+function enterPinMode() {
+  pinMode = true;
+  pinDigits = '';
+  pinWord = '';
+  input.value = '';
+  input.placeholder = '4-digit PIN';
+  input.focus();
+}
+
+function askForPin() {
+  const left = Number(pending && pending.pin_attempts_left) || 3;
+  const count = inBatch ? queuedPlans.filter((p) => confirmed.has(p.plan_id)).length : 1;
+  const lead = count > 1
+    ? `Almost there. One PIN sends all ${count} payouts. Enter your 4-digit PIN — ${left} ${left === 1 ? 'try' : 'tries'} left.`
+    : `Almost there. Enter your 4-digit PIN — ${left} ${left === 1 ? 'try' : 'tries'} left.`;
+  enterPinMode();
+  speak(`${lead}\n\nSay cancel if you'd rather wait. I won't send anything until the PIN is right.`);
+}
+
+function markQueued(el) {
+  if (!el) return;
+  const pill = el.querySelector('.pill');
+  if (pill) pill.textContent = 'Ready to send';
+  const hint = el.querySelector('.hint');
+  if (hint) hint.textContent = "Got it. This goes out with the others after your PIN.";
+}
+
+async function showReceipt(plan) {
+  yesTarget = 'payout';
+  shownPlanId = plan.plan_id;
+  pending = plan;
+  const el = document.createElement('div');
+  el.className = 'msg bot receipt';
+  const flag = countryFlag(String(plan.corridor || '').split('/')[0]);
+  el.innerHTML = `<div class="who"><strong class="copy" data-copy="${esc(plan.supplier)}">${esc(plan.supplier)}</strong>${flag ? `<span class="co-flag">${flag}</span>` : ''}<span class="pill hold">Needs approval</span></div><div class="fees"></div>`;
+  log.appendChild(el);
+  log.scrollTop = log.scrollHeight;
+  receiptEl = el;
+  await revealLines(el.querySelector('.fees'), feeLines(plan));
+  const hint = document.createElement('p');
+  hint.className = 'hint fade-line';
+  const last = inBatch && queuedPlans.filter((p) => !confirmed.has(p.plan_id)).length <= 1;
+  hint.textContent = !inBatch
+    ? "If this looks right, say yes. I'll ask for your PIN before it goes out. Say no to cancel, or give me a new amount."
+    : last
+      ? "If this looks right, say yes. Then one PIN sends the whole batch. Say no to drop the batch."
+      : "If this looks right, say yes and I'll show the next one. Nothing goes out until your PIN at the end. Say no to drop the batch.";
+  el.appendChild(hint);
+  log.scrollTop = log.scrollHeight;
+}
+
+async function markApproved(plan, transfer) {
+  const id = (transfer && (transfer.transfer_id || transfer.id)) || '';
+  const status = (transfer && transfer.status) || 'PROCESSING';
+  const el = document.createElement('div');
+  el.className = 'msg bot receipt';
+  const flag = countryFlag(String(plan.corridor || '').split('/')[0]);
+  el.innerHTML = `<div class="who"><strong class="copy" data-copy="${esc(plan.supplier)}">${esc(plan.supplier)}</strong>${flag ? `<span class="co-flag">${flag}</span>` : ''}<span class="pill ok">Approved</span></div><div class="fees"></div>`;
+  log.appendChild(el);
+  log.scrollTop = log.scrollHeight;
+  approvedEl = el;
+  await revealLines(el.querySelector('.fees'), feeLines(plan));
+  const ref = document.createElement('p');
+  ref.className = 'refid fade-line';
+  ref.innerHTML = `<span>Reference id</span>${id ? copySpan(id) : ''}`;
+  el.appendChild(ref);
+  const rail = statusRail(status, id);
+  rail.classList.add('fade-line');
+  el.appendChild(rail);
+  const hint = document.createElement('p');
+  hint.className = 'hint fade-line';
+  hint.textContent = 'On its way.';
+  el.appendChild(hint);
+  if (id) poll(id, el);
+  log.scrollTop = log.scrollHeight;
+}
+
+function snapshotBalances(map) {
+  const out = {};
+  Object.entries(map || {}).forEach(([k, v]) => { out[k] = Number(v); });
+  return out;
+}
+
+function debitCurrencies(plan) {
+  const set = new Set();
+  if (plan && plan.currency) set.add(plan.currency);
+  if (plan && Number(plan.fee) > 0 && plan.fee_currency) set.add(plan.fee_currency);
+  return set;
+}
+
+function balanceDropped(before, after, ccy) {
+  return Number(after[ccy] || 0) + 0.0001 < Number(before[ccy] || 0);
+}
+
+function balanceAmount(n) {
+  return Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function moneyLine(n, ccy) {
+  return `${balanceAmount(n)} ${ccy}`;
+}
+
+function pricedFromTransfer(plan, transfer) {
+  if (!transfer || transfer.amount_payer_pays == null || transfer.amount_payer_pays === '') return plan;
+  const next = Object.assign({}, plan);
+  next.total_debit = transfer.amount_payer_pays;
+  if (transfer.fee_amount != null && transfer.fee_amount !== '') {
+    next.fee = transfer.fee_amount;
+    next.fee_currency = transfer.fee_currency || plan.fee_currency || plan.currency;
+  }
+  return next;
+}
+
+function balanceBridge(plan, before) {
+  const ccy = plan.currency;
+  const beforeAmt = Number(before[ccy] || 0);
+  const sameFee = !plan.fee_currency || plan.fee_currency === ccy;
+  const debit = Number(sameFee ? plan.total_debit : plan.amount);
+  const afterAmt = beforeAmt - debit;
+  let text = `Before this transfer your balance is ${moneyLine(beforeAmt, ccy)}. After the transfer your balance will be ${moneyLine(afterAmt, ccy)}.`;
+  if (!sameFee && Number(plan.fee) > 0) {
+    const feeCcy = plan.fee_currency;
+    const feeBefore = Number(before[feeCcy] || 0);
+    const feeAfter = feeBefore - Number(plan.fee);
+    text += ` The fee takes your ${feeCcy} balance from ${moneyLine(feeBefore, feeCcy)} to ${moneyLine(feeAfter, feeCcy)}.`;
+  }
+  return `${text}\n\nHere's your balance overview 👇`;
+}
+
+function batchBridge(plans, before) {
+  if (plans.length === 1) return balanceBridge(plans[0], before);
+  const debits = {};
+  plans.forEach((plan) => {
+    const sameFee = !plan.fee_currency || plan.fee_currency === plan.currency;
+    debits[plan.currency] = (debits[plan.currency] || 0) + Number(sameFee ? plan.total_debit : plan.amount);
+    if (!sameFee && Number(plan.fee) > 0) {
+      debits[plan.fee_currency] = (debits[plan.fee_currency] || 0) + Number(plan.fee);
+    }
+  });
+  const lines = Object.keys(debits).sort().map((ccy) => {
+    const was = Number(before[ccy] || 0);
+    return `Your ${ccy} balance goes from ${moneyLine(was, ccy)} to ${moneyLine(was - debits[ccy], ccy)}.`;
+  });
+  return `${lines.join(' ')}\n\nHere's your balance overview 👇`;
+}
+
+function balanceCodes(before, after) {
+  return [...new Set([...Object.keys(before), ...Object.keys(after)])]
+    .filter((ccy) => Number(after[ccy] || 0) > 0 || Number(before[ccy] || 0) > 0)
+    .sort();
+}
+
+function amountNode(from, to) {
+  const node = document.createElement('span');
+  node.className = 'rollnum copy';
+  node.dataset.copy = balanceAmount(to);
+  node.dataset.from = String(from);
+  node.dataset.to = String(to);
+  node.textContent = balanceAmount(from);
+  return node;
+}
+
+const FLAGS = {
+  USD: '🇺🇸', EUR: '🇪🇺', GBP: '🇬🇧', CNY: '🇨🇳', JPY: '🇯🇵',
+  AUD: '🇦🇺', CAD: '🇨🇦', HKD: '🇭🇰', SGD: '🇸🇬', NZD: '🇳🇿', CHF: '🇨🇭', CNH: '🇨🇳',
+};
+
+function ccyName(ccy) {
+  const code = String(ccy || '').toUpperCase();
+  return FLAGS[code] ? `${FLAGS[code]} ${code}` : code;
+}
+
+function rollAmount(node) {
+  if (!node) return;
+  const from = Number(node.dataset.from);
+  const to = Number(node.dataset.to);
+  const toText = balanceAmount(Number.isFinite(to) ? to : 0);
+  if (!Number.isFinite(from) || !Number.isFinite(to) || Math.abs(to - from) < 0.005 || motionOff()) {
+    node.textContent = toText;
+    revealDelta(node);
+    return;
+  }
+  const fromText = balanceAmount(from);
+  const width = Math.max(fromText.length, toText.length);
+  const start = fromText.padStart(width, '\u2007');
+  const end = toText.padStart(width, '\u2007');
+  node.textContent = '';
+  const moving = [];
+  for (let i = 0; i < width; i++) {
+    const col = document.createElement('span');
+    col.className = 'tick-col';
+    const a = start[i];
+    const b = end[i];
+    col.style.width = /\d/.test(a) || /\d/.test(b) ? '1ch' : '0.65ch';
+    if (!/\d/.test(a) || !/\d/.test(b) || a === b) {
+      const cell = document.createElement('span');
+      cell.textContent = b;
+      col.appendChild(cell);
+      node.appendChild(col);
+      continue;
+    }
+    const strip = document.createElement('span');
+    strip.className = 'tick-strip';
+    let digit = Number(a);
+    const land = Number(b);
+    const cells = [String(digit)];
+    let guard = 0;
+    while (digit !== land && guard < 10) {
+      digit = (digit + 1) % 10;
+      cells.push(String(digit));
+      guard += 1;
+    }
+    cells.forEach((ch) => {
+      const cell = document.createElement('span');
+      cell.textContent = ch;
+      strip.appendChild(cell);
+    });
+    col.appendChild(strip);
+    node.appendChild(col);
+    moving.push({ strip, steps: cells.length - 1 });
+  }
+  if (!moving.length) {
+    revealDelta(node);
+    return;
+  }
+  let settled = false;
+  const started = performance.now();
+  const finish = () => {
+    if (settled || performance.now() - started < ROLL_MS - 100) return;
+    settled = true;
+    revealDelta(node);
+  };
+  setTimeout(finish, ROLL_MS + 150);
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    moving.forEach(({ strip, steps }) => {
+      strip.style.transform = `translateY(calc(${-steps} * var(--digit)))`;
+    });
+  }));
+}
+
+function revealDelta(node) {
+  const delta = node.parentElement && node.parentElement.querySelector('.delta');
+  if (!delta || delta.classList.contains('show')) return;
+  delta.classList.remove('wait');
+  if (!motionOff()) delta.classList.add('show');
+}
+
+function fillBalanceAmount(amt, from, to) {
+  const dropped = to + 0.0001 < from;
+  const up = to > from + 0.0001;
+  const old = amt.querySelector('.rollnum');
+  if (old) clearInterval(old._roll);
+  amt.innerHTML = '';
+  const num = amountNode(from, to);
+  if (dropped || up) {
+    const delta = document.createElement('em');
+    delta.className = 'delta wait' + (up ? ' up' : '');
+    delta.textContent = (up ? '+' : '−') + balanceAmount(Math.abs(to - from));
+    amt.appendChild(delta);
+  }
+  amt.appendChild(num);
+  return num;
+}
+
+function balanceRows(before, after) {
+  const codes = balanceCodes(before, after);
+  const moved = (ccy) => Math.abs(Number(after[ccy] || 0) - Number(before[ccy] || 0)) >= 0.005;
+  return [...codes.filter((ccy) => !moved(ccy)), ...codes.filter(moved)]
+    .map((ccy) => balanceLine(ccy, before, after));
+}
+
+function balanceLine(ccy, before, after) {
+  const from = Number(before[ccy] || 0);
+  const to = Number(after[ccy] || 0);
+  const line = document.createElement('div');
+  line.className = 'bal-row' + (to + 0.0001 < from ? ' deduct' : '') + (to > from + 0.0001 ? ' credit' : '');
+  line.dataset.ccy = ccy;
+  const name = document.createElement('span');
+  name.className = 'ccy';
+  name.textContent = ccyName(ccy);
+  const amt = document.createElement('span');
+  amt.className = 'amt';
+  fillBalanceAmount(amt, from, to);
+  line.appendChild(name);
+  line.appendChild(amt);
+  return line;
+}
+
+async function showSuppliers(res) {
+  const el = document.createElement('div');
+  el.className = 'msg bot receipt';
+  el.innerHTML = `<div class="who"><strong>${esc(res.title || '')}</strong></div><div class="bal"></div>`;
+  log.appendChild(el);
+  const rows = (res.rows || []).map((row) => {
+    const line = document.createElement('div');
+    line.className = 'bal-row';
+    const name = document.createElement('span');
+    name.className = 'ccy';
+    if (row.copy && row.label) {
+      const copy = document.createElement('span');
+      copy.className = 'copy';
+      copy.dataset.copy = row.label;
+      copy.textContent = row.label;
+      name.appendChild(copy);
+    } else {
+      name.textContent = row.label || '';
+    }
+    const flag = countryFlag(row.country);
+    if (flag) {
+      const mark = document.createElement('span');
+      mark.className = 'co-flag';
+      mark.textContent = flag;
+      name.appendChild(mark);
+    }
+    if (row.tag) {
+      const tag = document.createElement('em');
+      tag.className = 'tag';
+      tag.textContent = row.tag;
+      name.appendChild(tag);
+    }
+    const amt = document.createElement('span');
+    amt.className = 'amt';
+    amt.textContent = row.value || '';
+    line.appendChild(name);
+    line.appendChild(amt);
+    return line;
+  });
+  await revealLines(el.querySelector('.bal'), rows);
+  await followUp(res.note);
+}
+
+async function showBalances(res) {
+  const el = document.createElement('div');
+  el.className = 'msg bot receipt';
+  el.innerHTML = `<div class="who"><strong>${esc(res.title || '')}</strong></div><div class="bal"></div>`;
+  log.appendChild(el);
+  const rows = (res.rows || []).map((row) => {
+    const line = document.createElement('div');
+    line.className = 'bal-row';
+    const name = document.createElement('span');
+    name.className = 'ccy';
+    name.textContent = ccyName(row.label || '');
+    const amt = document.createElement('span');
+    amt.className = 'amt copy';
+    amt.dataset.copy = row.value || '';
+    amt.textContent = row.value || '';
+    line.appendChild(name);
+    line.appendChild(amt);
+    return line;
+  });
+  await revealLines(el.querySelector('.bal'), rows);
+  await followUp(res.note);
+}
+
+function writeBalanceLine(line, before, after) {
+  const ccy = line.dataset.ccy;
+  const from = Number(before[ccy] || 0);
+  const to = Number(after[ccy] || 0);
+  line.classList.toggle('deduct', to + 0.0001 < from);
+  line.classList.toggle('credit', to > from + 0.0001);
+  const amt = line.querySelector('.amt');
+  const shown = Number(String((amt.querySelector('.rollnum') || {}).textContent || '').replace(/,/g, ''));
+  const start = Number.isFinite(shown) ? shown : from;
+  const num = fillBalanceAmount(amt, start, to);
+  rollAmount(num);
+}
+
+async function readBalances() {
+  const r = await fetch('/api/balances');
+  if (!r.ok) return null;
+  const c = await r.json();
+  walletBalances = snapshotBalances(c.balances);
+  return c;
+}
+
+function creditsByCurrency(transfers) {
+  const by = {};
+  (transfers || []).forEach((t) => {
+    const ccy = t.source_currency || t.currency;
+    by[ccy] = (by[ccy] || 0) + Number(t.payer_pays || 0);
+  });
+  return by;
+}
+
+function creditBridge(transfers, before) {
+  const by = creditsByCurrency(transfers);
+  const lines = Object.keys(by).sort().map((ccy) => {
+    const was = Number(before[ccy] || 0);
+    const next = was + by[ccy];
+    return `Before this cancel your balance is ${moneyLine(was, ccy)}. After it your balance will be ${moneyLine(next, ccy)}.`;
+  });
+  return `${lines.join(' ')}\n\nHere's your balance overview 👇`;
+}
+
+function cancelRows(transfers) {
+  return transfers.map((t) => {
+    const wrap = document.createElement('div');
+    wrap.className = 'fade-line';
+    const line = document.createElement('div');
+    line.className = 'line';
+    const back = moneyLine(t.payer_pays, t.source_currency || t.currency);
+    line.classList.add('has-rail');
+    line.innerHTML = `<span class="lbl"><span class="lbl-top">${companyLabel(t.payee || 'Transfer', t.country, true)}</span></span>`;
+    line.appendChild(statusRail(t.status || 'PROCESSING', t.id));
+    wrap.appendChild(line);
+    const sub = document.createElement('div');
+    sub.className = 'subline';
+    sub.innerHTML = `${copySpan(back + ' returns')} · ${copySpan(t.reference || 'No invoice')}`;
+    wrap.appendChild(sub);
+    if (t.id) {
+      const ref = document.createElement('div');
+      ref.className = 'subline refid';
+      ref.innerHTML = `<span>Reference id</span>${copySpan(t.id)}`;
+      wrap.appendChild(ref);
+    }
+    return wrap;
+  });
+}
+
+async function showCancel(res) {
+  pendingCancel = res;
+  yesTarget = 'cancel';
+  const many = (res.transfers || []).length > 1;
+  const el = document.createElement('div');
+  el.className = 'msg bot receipt listy';
+  el.innerHTML = `<div class="who"><strong>${many ? 'Cancel these' : 'Cancel this'}</strong><span class="pill hold">Needs a yes</span></div><div class="fees"></div>`;
+  log.appendChild(el);
+  log.scrollTop = log.scrollHeight;
+  await revealLines(el.querySelector('.fees'), cancelRows(res.transfers || []));
+  await followUp(many
+    ? "Say yes and I'll cancel all of these. Say no to leave them."
+    : "Say yes and I'll cancel this. Say no to leave it.");
+}
+
+async function markCancelled(transfers) {
+  const el = document.createElement('div');
+  el.className = 'msg bot receipt listy';
+  const title = transfers.length > 1 ? 'Cancelled' : (transfers[0].payee || 'Cancelled');
+  const name = transfers.length > 1 ? esc(title) : copySpan(title);
+  const flag = transfers.length === 1 ? countryFlag(transfers[0].country) : '';
+  el.innerHTML = `<div class="who"><strong>${name}</strong>${flag ? `<span class="co-flag">${flag}</span>` : ''}<span class="pill ok">Cancelled</span></div><div class="fees"></div>`;
+  log.appendChild(el);
+  log.scrollTop = log.scrollHeight;
+  await revealLines(el.querySelector('.fees'), cancelRows(transfers));
+}
+
+async function showWalletCredit(transfers, before) {
+  const watch = new Set(Object.keys(creditsByCurrency(transfers)));
+  let after = snapshotBalances(walletBalances);
+  const rose = (snap) => [...watch].some((ccy) => Number(snap[ccy] || 0) > Number(before[ccy] || 0) + 0.0001);
+  for (let i = 0; i < 6 && !rose(after); i++) {
+    await sleep(450);
+    const c = await readBalances();
+    if (!c) break;
+    after = snapshotBalances(c.balances);
+  }
+  const el = document.createElement('div');
+  el.className = 'msg bot receipt';
+  el.innerHTML = `<div class="who"><strong>Balances</strong></div><div class="bal"></div>`;
+  log.appendChild(el);
+  await revealLines(el.querySelector('.bal'), balanceRows(before, after));
+  const stillWaiting = [...watch].some((ccy) => Number(after[ccy] || 0) <= Number(before[ccy] || 0) + 0.0001);
+  if (stillWaiting) {
+    const hint = document.createElement('p');
+    hint.className = 'hint';
+    hint.textContent = "The wallet hasn't posted that credit yet. I'll update this when it does.";
+    el.appendChild(hint);
+  }
+  log.scrollTop = log.scrollHeight;
+}
+
+async function confirmCancel() {
+  const batch = pendingCancel;
+  if (!batch) return;
+  pendingCancel = null;
+  yesTarget = 'payout';
+  await readBalances();
+  const before = snapshotBalances(walletBalances);
+  const res = await post('/api/cancel-transfers', {
+    batch_id: batch.batch_id,
+    fingerprint: batch.fingerprint,
+    confirm: true,
+  });
+  if (res.error) {
+    speak(res.error, 'err');
+    return;
+  }
+  const ok = res.results || [];
+  const failed = res.failed || [];
+  ok.forEach((t) => showStatus(t.id, t.status || 'CANCELLED'));
+  if (ok.length) await markCancelled(ok);
+  if (failed.length) await speak(failed.map((t) => t.error).filter(Boolean).join('\n\n'), 'err');
+  if (!ok.length) return;
+  await speak(creditBridge(ok, before));
+  await showWalletCredit(ok, before);
+  refresh();
+}
+
+async function showWalletDeduction(plans, before) {
+  const watch = new Set(plans.flatMap((p) => [...debitCurrencies(p)]));
+  let after = snapshotBalances(walletBalances);
+  for (let i = 0; i < 6; i++) {
+    if ([...watch].some((ccy) => balanceDropped(before, after, ccy))) break;
+    await new Promise((r) => setTimeout(r, 450));
+    const c = await readBalances();
+    if (!c) break;
+    after = snapshotBalances(c.balances);
+  }
+  const el = document.createElement('div');
+  el.className = 'msg bot receipt';
+  el.innerHTML = `<div class="who"><strong>Balances</strong></div><div class="bal"></div>`;
+  log.appendChild(el);
+  await revealLines(el.querySelector('.bal'), balanceRows(before, after));
+  const waiting = () => [...watch].some((ccy) => !balanceDropped(before, after, ccy));
+  if (waiting()) {
+    const hint = document.createElement('p');
+    hint.className = 'hint';
+    hint.textContent = "The wallet hasn't posted that debit yet. I'll update this when it does.";
+    el.appendChild(hint);
+  }
+  log.scrollTop = log.scrollHeight;
+  if (!waiting()) return;
+  for (let i = 0; i < 8; i++) {
+    await new Promise((r) => setTimeout(r, 1500));
+    const c = await readBalances();
+    if (!c) return;
+    after = snapshotBalances(c.balances);
+    el.querySelectorAll('.bal-row').forEach((line) => writeBalanceLine(line, before, after));
+    const hint = el.querySelector('.hint');
+    if (!waiting()) {
+      if (hint) hint.remove();
+      return;
+    }
+  }
+}
+
+function syncPending(plans) {
+  if (holdReceipt) return;
+  queuedPlans = plans || [];
+  if (queuedPlans.length > 1) inBatch = true;
+  [...confirmed.keys()].forEach((id) => {
+    if (!queuedPlans.some((p) => p.plan_id === id)) confirmed.delete(id);
+  });
+  if (!queuedPlans.length) {
+    pending = null;
+    shownPlanId = null;
+    if (pinMode) exitPinMode();
+    return;
+  }
+  const open = queuedPlans.filter((p) => !confirmed.has(p.plan_id));
+  if (!open.length) {
+    pending = queuedPlans[queuedPlans.length - 1];
+    return;
+  }
+  const plan = open[0];
+  pending = plan;
+  if (plan.plan_id !== shownPlanId) {
+    if (pinMode) exitPinMode();
+    showReceipt(plan);
+  }
+}
+
+async function rejectPending() {
+  const plan = pending;
+  if (!plan) return;
+  const res = await post('/api/reject', { plan_id: plan.plan_id, fingerprint: plan.fingerprint });
+  if (res.error) { speak(res.error, 'err'); return; }
+  pending = null;
+  shownPlanId = null;
+  confirmed.clear();
+  exitPinMode();
+  inBatch = false;
+  speak(Number(res.cleared) > 1
+    ? "No problem. Nothing was sent.\n\nI set the rest of this batch aside too. Want me to price a different one?"
+    : "No problem. Nothing was sent.\n\nWant me to price a different one?");
+  refresh();
+}
+
+async function submitPinEntry() {
+  const digits = pinDigits;
+  const word = pinWord.trim();
+  pinDigits = '';
+  pinWord = '';
+  input.value = '';
+  if (/^(cancel|no|stop)$/i.test(word)) {
+    say(word, 'me');
+    exitPinMode();
+    speak("Okay. Nothing was sent.\n\nSay yes when you want to try the PIN again.");
+    return;
+  }
+  if (digits.length !== 4) {
+    speak('I need the full 4 digits. Or say cancel.', 'err');
+    return;
+  }
+  say('••••', 'me');
+  if (inBatch) {
+    await submitBatchPin(digits);
+    return;
+  }
+  const plan = pending;
+  await readBalances();
+  const balancesBefore = snapshotBalances(walletBalances);
+  const res = await post('/api/approve', {
+    plan_id: plan.plan_id,
+    fingerprint: plan.fingerprint,
+    pin: digits,
+  });
+  if (!res.error) {
+    exitPinMode();
+    const approved = plan;
+    pending = null;
+    shownPlanId = null;
+    const t = res.transfer || {};
+    const charged = pricedFromTransfer(approved, t);
+    holdReceipt = true;
+    await markApproved(charged, t);
+    if (res.duplicate_avoided) {
+      const hint = approvedEl && approvedEl.querySelector('.hint');
+      if (hint) hint.textContent = `This was already sent — status ${t.status || ''}. Nothing new went out.`;
+    } else {
+      await speak(balanceBridge(charged, balancesBefore));
+      await showWalletDeduction([charged], balancesBefore);
+    }
+    holdReceipt = false;
+    refresh();
+    return;
+  }
+  say(res.error, 'err');
+  await refresh();
+  if (!accountLocked && pending) enterPinMode();
+}
+
+async function submitBatchPin(digits) {
+  const plans = queuedPlans.filter((p) => confirmed.has(p.plan_id));
+  await readBalances();
+  const balancesBefore = snapshotBalances(walletBalances);
+  const res = await post('/api/approve-batch', {
+    items: plans.map((p) => ({ plan_id: p.plan_id, fingerprint: confirmed.get(p.plan_id) })),
+    pin: digits,
+  });
+  if (res.error) {
+    say(res.error, 'err');
+    if (res.status !== 401) {
+      exitPinMode();
+      confirmed.clear();
+      shownPlanId = null;
+    }
+    await refresh();
+    if (!accountLocked && pending && confirmed.has(pending.plan_id)) enterPinMode();
+    return;
+  }
+  exitPinMode();
+  pending = null;
+  shownPlanId = null;
+  confirmed.clear();
+  holdReceipt = true;
+  const byId = new Map(plans.map((p) => [p.plan_id, p]));
+  const charged = [];
+  for (const r of res.results || []) {
+    const plan = byId.get(r.plan_id);
+    if (!plan) continue;
+    const t = r.transfer || {};
+    const priced = pricedFromTransfer(plan, t);
+    await markApproved(priced, t);
+    if (r.duplicate_avoided) {
+      const hint = approvedEl && approvedEl.querySelector('.hint');
+      if (hint) hint.textContent = `This was already sent — status ${t.status || ''}. Nothing new went out.`;
+    } else {
+      charged.push(priced);
+    }
+  }
+  if (charged.length) {
+    await speak(batchBridge(charged, balancesBefore));
+    await showWalletDeduction(charged, balancesBefore);
+  }
+  holdReceipt = false;
+  if (res.failed) {
+    await speak(`${res.failed.supplier} didn't go out: ${res.failed.error}\n\nI stopped there, so nothing after it was sent.`, 'err');
+    if (Number(res.remaining) > 0) {
+      await speak("The payouts that didn't go out are still waiting. Say yes to each again, then your PIN.");
+    } else {
+      inBatch = false;
+    }
+  } else {
+    inBatch = false;
+    await speak("That's everyone ✅\n\nYou're all set. Anything else I can take care of?");
+  }
+  refresh();
+}
+
+input.addEventListener('keydown', (e) => {
+  if (!pinMode || e.key === 'Enter') return;
+  if (e.key === 'Backspace') {
+    if (pinWord) pinWord = pinWord.slice(0, -1);
+    else pinDigits = pinDigits.slice(0, -1);
+  } else if (/^\d$/.test(e.key) && !pinWord && pinDigits.length < 4) {
+    pinDigits += e.key;
+  } else if (/^[a-z]$/i.test(e.key) && !pinDigits && pinWord.length < 12) {
+    pinWord += e.key;
+  } else if (e.key.length === 1) {
+    e.preventDefault();
+    return;
+  } else {
+    return;
+  }
+  e.preventDefault();
+  input.value = pinWord || '•'.repeat(pinDigits.length);
+});
+input.addEventListener('paste', (e) => { if (pinMode) e.preventDefault(); });
+
+const watchedRails = new Map();
+let railLoopOn = false;
+
+function watchRail(id, rail, hook) {
+  if (!id) return;
+  let job = watchedRails.get(id);
+  if (!job) {
+    job = { rails: new Set(), hooks: new Set() };
+    watchedRails.set(id, job);
+  }
+  if (rail) job.rails.add(rail);
+  if (hook) job.hooks.add(hook);
+  startRailLoop();
+}
+
+function pruneRails() {
+  watchedRails.forEach((job, id) => {
+    job.rails.forEach((rail) => { if (!rail.isConnected) job.rails.delete(rail); });
+    if (!job.rails.size && !job.hooks.size) watchedRails.delete(id);
+  });
+  return watchedRails.size > 0;
+}
+
+function nextCheckDelay(byId) {
+  let soonest = null;
+  watchedRails.forEach((job, id) => {
+    const due = byId.get(id) && byId.get(id).countdown && byId.get(id).countdown.due_at;
+    if (!due) return;
+    const ms = Date.parse(due) - Date.now();
+    if (Number.isNaN(ms)) return;
+    if (soonest === null || ms < soonest) soonest = ms;
+  });
+  if (soonest === null) return 8000;
+  return Math.min(50000, Math.max(1500, soonest + 500));
+}
+
+async function readWatched() {
+  const ids = [...watchedRails.keys()];
+  const byId = new Map();
+  if (!ids.length) return byId;
+  if (ids.length === 1) {
+    const id = ids[0];
+    try {
+      const r = await fetch(`/api/transfer/${encodeURIComponent(id)}`);
+      if (r.ok) byId.set(id, Object.assign({ id }, await r.json()));
+    } catch (e) { /* the next wake tries again */ }
+    return byId;
+  }
+  try {
+    const r = await fetch('/api/transfers/recent');
+    if (r.ok) {
+      const data = await r.json();
+      (data.transfers || []).forEach((t) => byId.set(t.id, t));
+    }
+  } catch (e) { /* the next wake tries again */ }
+  return byId;
+}
+
+async function startRailLoop() {
+  if (railLoopOn) return;
+  railLoopOn = true;
+  try {
+    while (pruneRails()) {
+      const byId = await readWatched();
+      watchedRails.forEach((job, id) => {
+        const t = byId.get(id);
+        if (!t) return;
+        const next = showStatus(id, t.status);
+        const terminal = FINAL_STATUS.test(next);
+        const view = Object.assign({}, t, {
+          status: next,
+          terminal,
+          failed: next === 'FAILED' || next === 'CANCELLED',
+        });
+        job.hooks.forEach((fn) => fn(view));
+        const timed = Boolean(t.countdown && t.countdown.due_at);
+        job.idle = (!timed && next === job.last) ? (job.idle || 0) + 1 : 0;
+        job.last = next;
+        // Nothing is moving it, so stop asking. A reload shows the latest state.
+        if (terminal || job.idle >= 15) watchedRails.delete(id);
+      });
+      if (!pruneRails()) break;
+      await sleep(nextCheckDelay(byId));
+    }
+  } finally {
+    railLoopOn = false;
+    if (pruneRails()) startRailLoop();
+  }
+}
+
+function watchHistory(card) {
+  card.querySelectorAll('.rail[data-id]').forEach((rail) => {
+    if (rail.dataset.state === 'go') watchRail(rail.dataset.id, rail);
+  });
+}
+
+function poll(id, card) {
+  const root = () => card || approvedEl;
+  const rail = root() && root().querySelector(':scope > .rail');
+  watchRail(id, rail, (s) => {
+    const el = root();
+    const h = el && el.querySelector('.hint');
+    if (!h) return;
+    if (!s.terminal) {
+      h.textContent = 'On its way.';
+      return;
+    }
+    h.textContent = s.status === 'CANCELLED' && !s.failure_type
+      ? 'Cancelled. The funds should return to the wallet.'
+      : s.failed
+      ? `This didn't go through. Status ${s.status}, type ${s.failure_type || 'n/a'}, reason ${s.failure_reason || 'n/a'}.`
+      : 'All set.';
+    refresh();
+  });
+}
+
+async function post(url, body) {
+  const r = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const j = await r.json().catch(() => ({}));
+  if (r.ok) return j;
+  const detail = j.detail;
+  const error = typeof detail === 'string'
+    ? detail
+    : Array.isArray(detail)
+      ? detail.map(d => (d && d.msg) || JSON.stringify(d)).join(' ')
+      : `Request failed (${r.status})`;
+  return { error, status: r.status };
+}
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (accountLocked || sending) return;
+  if (pinMode) {
+    await submitPinEntry();
+    return;
+  }
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  await send(text);
+});
+
+document.getElementById('chips').addEventListener('click', async (e) => {
+  if (accountLocked || pinMode || sending) return;
+  let q = e.target.dataset.q;
+  if (!q) return;
+  const payee = e.target.dataset.invoiceFor;
+  if (payee) {
+    const r = await fetch(`/api/next-invoice?supplier=${encodeURIComponent(payee)}`);
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || !j.invoice) {
+      speak(j.detail || "I couldn't find the next invoice number just now. Want to try again?", 'err');
+      return;
+    }
+    q = q.replace('{invoice}', j.invoice);
+  }
+  send(q);
+});
+
+let sending = false;
+
+const MAX_INVOICES = 6;
+const invoiceInput = document.getElementById('invoice-files');
+const dropZone = document.querySelector('main');
+let dragDepth = 0;
+
+function draggingFiles(e) {
+  return Boolean(e.dataTransfer) && [...e.dataTransfer.types].includes('Files');
+}
+
+document.getElementById('attach').addEventListener('click', () => {
+  if (accountLocked || pinMode || sending) return;
+  invoiceInput.value = '';
+  invoiceInput.click();
+});
+invoiceInput.addEventListener('change', () => uploadInvoices(invoiceInput.files));
+
+// A PDF dropped anywhere else must not replace the page.
+window.addEventListener('dragover', (e) => { if (draggingFiles(e)) e.preventDefault(); });
+window.addEventListener('drop', (e) => { if (draggingFiles(e)) e.preventDefault(); });
+dropZone.addEventListener('dragenter', (e) => {
+  if (!draggingFiles(e) || accountLocked) return;
+  dragDepth += 1;
+  dropZone.classList.add('dropping');
+});
+dropZone.addEventListener('dragleave', () => {
+  dragDepth = Math.max(0, dragDepth - 1);
+  if (!dragDepth) dropZone.classList.remove('dropping');
+});
+dropZone.addEventListener('drop', (e) => {
+  dragDepth = 0;
+  dropZone.classList.remove('dropping');
+  if (!draggingFiles(e)) return;
+  e.preventDefault();
+  uploadInvoices(e.dataTransfer.files);
+});
+
+function fileAsBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).split(',')[1] || '');
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
+
+async function showInvoices(invoices) {
+  const ok = invoices.filter((inv) => inv.ok);
+  if (!ok.length) return;
+  const el = document.createElement('div');
+  el.className = 'msg bot receipt listy';
+  const title = ok.length === 1 ? 'Invoice read' : `${ok.length} invoices read`;
+  el.innerHTML = `<div class="who"><strong>${esc(title)}</strong></div><div class="fees"></div>`;
+  log.appendChild(el);
+  const rows = ok.map((inv) => listLine({
+    label: inv.supplier,
+    value: moneyLine(inv.amount, inv.currency),
+    sub: `${inv.invoice} · ${inv.file}`,
+  }));
+  await revealLines(el.querySelector('.fees'), rows);
+}
+
+async function uploadInvoices(list) {
+  const files = [...(list || [])];
+  if (!files.length || accountLocked || pinMode || sending) return;
+  if (files.length > MAX_INVOICES) {
+    speak(`I can read up to ${MAX_INVOICES} invoices at a time. Try again with ${MAX_INVOICES} or fewer.`, 'err');
+    return;
+  }
+  const notPdf = files.filter((f) => f.type !== 'application/pdf' && !/\.pdf$/i.test(f.name));
+  if (notPdf.length) {
+    const names = notPdf.map((f) => f.name).join(', ');
+    speak(`${names} ${notPdf.length > 1 ? "aren't PDFs" : "isn't a PDF"}. I only read PDF invoices.`, 'err');
+    return;
+  }
+  sending = true;
+  try {
+    say(`📎 ${files.map((f) => f.name).join(', ')}`, 'me');
+    showTyping();
+    let res;
+    try {
+      const payload = await Promise.all(files.map(async (f) => ({ name: f.name, data: await fileAsBase64(f) })));
+      res = await post('/api/invoices/read', { files: payload });
+    } catch (e) {
+      hideTyping();
+      speak("I couldn't open those files just now. Want to try again?", 'err');
+      return;
+    }
+    hideTyping();
+    if (res.error) {
+      await speak(res.error, 'err');
+      return;
+    }
+    const invoices = res.invoices || [];
+    const readable = invoices.filter((inv) => inv.ok).length;
+    if (readable) {
+      await speak(readable === 1 ? "Here's what I read from that invoice 👇" : `Here's what I read from those ${readable} invoices 👇`);
+      await showInvoices(invoices);
+    }
+    const problems = invoices.filter((inv) => !inv.ok).map((inv) => inv.error).filter(Boolean);
+    if (problems.length) await speak(problems.join('\n\n'), 'err');
+    if (!res.message) {
+      await speak("There's nothing I can pay from that. Want to try another invoice, or type the payout?");
+      return;
+    }
+    await sendNow(res.message, { echo: false, invoices: readable });
+  } finally {
+    sending = false;
+  }
+}
+
+async function send(text) {
+  if (accountLocked || pinMode || sending) return;
+  sending = true;
+  try {
+    await sendNow(text);
+  } finally {
+    sending = false;
+  }
+}
+
+async function sendNow(text, opts = {}) {
+  if (yesTarget === 'cancel' && pendingCancel && isYes(text)) {
+    say(text, 'me');
+    await confirmCancel();
+    return;
+  }
+  if (yesTarget === 'cancel' && pendingCancel && isNo(text)) {
+    say(text, 'me');
+    const batch = pendingCancel;
+    pendingCancel = null;
+    yesTarget = 'payout';
+    await post('/api/cancel-transfers', {
+      batch_id: batch.batch_id,
+      fingerprint: batch.fingerprint,
+      confirm: false,
+    });
+    speak("No problem. I left those transfers alone.\n\nWant me to look at another one?");
+    return;
+  }
+  if (pending && isYes(text)) {
+    say(text, 'me');
+    if (!inBatch) {
+      askForPin();
+      return;
+    }
+    if (!confirmed.has(pending.plan_id)) {
+      confirmed.set(pending.plan_id, pending.fingerprint);
+      markQueued(receiptEl);
+    }
+    await refresh();
+    if (pending && confirmed.has(pending.plan_id)) askForPin();
+    return;
+  }
+  if (pending && isNo(text)) {
+    say(text, 'me');
+    await rejectPending();
+    return;
+  }
+  if (opts.echo !== false) say(text, 'me');
+  showTyping();
+  const started = Date.now();
+  let res;
+  try {
+    const body = { message: text, session_id: sessionId };
+    if (opts.invoices) body.invoices = opts.invoices;
+    res = await post('/api/chat', body);
+  } catch (e) {
+    hideTyping();
+    speak('I lost the connection for a moment. Want to try that again?', 'err');
+    return;
+  }
+  const pause = 380 - (Date.now() - started);
+  if (pause > 0) await sleep(pause);
+  hideTyping();
+  if (res.error) await speak(res.error, 'err');
+  else if (res.type === 'question') await speak(res.question, 'bot');
+  else if (res.type === 'list') {
+    if (res.lead) await speak(res.lead);
+    await showList(res);
+  }
+  else if (res.type === 'info') await speak(res.text, 'bot');
+  else if (res.type === 'blocked') {
+    await speak(res.reason, 'err');
+    if (res.question) await speak(res.question, 'bot');
+  } else if (res.type === 'cancel' && res.transfers && res.transfers.length) {
+    pendingCancel = null;
+    const many = res.transfers.length > 1;
+    if (res.lead) await speak(res.lead);
+    await refresh();
+    await showCancel(res);
+    return;
+  } else if (res.type === 'plan' && res.plan) {
+    pendingCancel = null;
+    yesTarget = 'payout';
+    confirmed.clear();
+    shownPlanId = null;
+    inBatch = Number(res.queue) > 1;
+    if (res.lead) await speak(res.lead);
+  }
+  refresh();
+}
+
+async function refresh() {
+  const r = await fetch('/api/context');
+  if (!r.ok) return;
+  const c = await r.json();
+  if (c.locked) {
+    const first = !accountLocked;
+    applyLock(c.lock_message);
+    if (first && !log.innerText.includes('account is locked')) say(c.lock_message, 'err');
+    return;
+  }
+  syncPending(c.pending);
+}
+
+const httpList = document.getElementById('http-list');
+const httpPanel = document.getElementById('http');
+const httpToggle = document.getElementById('http-toggle');
+let httpAfter = 0;
+
+let httpOpenWidth = '';
+
+function clampHttpWidth(px) {
+  const max = Math.max(220, window.innerWidth - 280);
+  const min = Math.min(280, max);
+  return Math.min(max, Math.max(min, px));
+}
+
+function setHttpFolded(folded) {
+  httpPanel.classList.toggle('folded', folded);
+  httpPanel.style.width = folded ? '' : httpOpenWidth;
+  httpToggle.textContent = folded ? '<' : '>';
+  httpToggle.title = folded ? 'Expand' : 'Fold';
+  httpToggle.setAttribute('aria-expanded', String(!folded));
+  httpToggle.setAttribute('aria-label', folded ? 'Expand HTTP console' : 'Fold HTTP console');
+  httpPanel.querySelector('.http-body').setAttribute('aria-hidden', String(folded));
+  httpResize.tabIndex = folded ? -1 : 0;
+}
+
+httpToggle.addEventListener('click', () => {
+  setHttpFolded(!httpPanel.classList.contains('folded'));
+});
+
+const httpResize = document.getElementById('http-resize');
+
+function setHttpWidth(px) {
+  const next = clampHttpWidth(px);
+  httpPanel.style.width = next + 'px';
+  httpOpenWidth = httpPanel.style.width;
+  httpResize.setAttribute('aria-valuenow', String(Math.round(next)));
+  httpResize.setAttribute('aria-valuemax', String(Math.round(Math.max(220, window.innerWidth - 280))));
+}
+
+httpResize.addEventListener('pointerdown', (e) => {
+  if (e.button !== 0 || httpPanel.classList.contains('folded')) return;
+  e.preventDefault();
+  const startX = e.clientX;
+  const startW = httpPanel.getBoundingClientRect().width;
+  httpPanel.classList.add('resizing');
+  function move(ev) {
+    setHttpWidth(startW + (startX - ev.clientX));
+  }
+  function up() {
+    window.removeEventListener('pointermove', move);
+    window.removeEventListener('pointerup', up);
+    window.removeEventListener('pointercancel', up);
+    httpPanel.classList.remove('resizing');
+  }
+  window.addEventListener('pointermove', move);
+  window.addEventListener('pointerup', up);
+  window.addEventListener('pointercancel', up);
+  try { httpResize.setPointerCapture(e.pointerId); } catch (err) {}
+});
+
+httpResize.addEventListener('keydown', (e) => {
+  if (httpPanel.classList.contains('folded')) return;
+  if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+  e.preventDefault();
+  const step = e.shiftKey ? 48 : 16;
+  const current = httpPanel.getBoundingClientRect().width;
+  setHttpWidth(current + (e.key === 'ArrowLeft' ? step : -step));
+});
+
+function jsonNode(value, depth) {
+  if (value === null || typeof value !== 'object') {
+    const kind = value === null ? 'null' : typeof value;
+    const span = document.createElement('span');
+    span.className = `jv ${kind}`;
+    span.textContent = value === null ? 'null'
+      : typeof value === 'string' ? JSON.stringify(value)
+      : String(value);
+    return span;
+  }
+  const isArr = Array.isArray(value);
+  const keys = isArr ? value.map((_, i) => i) : Object.keys(value);
+  const details = document.createElement('details');
+  details.className = 'jobj';
+  details.open = depth < 1;
+  const summary = document.createElement('summary');
+  summary.textContent = isArr ? `[${keys.length}]` : `{${keys.length}}`;
+  details.appendChild(summary);
+  const body = document.createElement('div');
+  body.className = 'jbody';
+  keys.forEach((key, i) => {
+    const row = document.createElement('div');
+    row.className = 'jrow';
+    const name = document.createElement('span');
+    name.className = 'jk';
+    name.textContent = String(key);
+    row.appendChild(name);
+    row.appendChild(document.createTextNode(': '));
+    row.appendChild(jsonNode(isArr ? value[i] : value[key], depth + 1));
+    body.appendChild(row);
+  });
+  details.appendChild(body);
+  return details;
+}
+
+let httpGen = 0;
+
+function stamp(iso) {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso || '';
+  const p = (n) => String(n).padStart(2, '0');
+  return `${p(date.getHours())}:${p(date.getMinutes())}:${p(date.getSeconds())}`;
+}
+
+function addHttpCall(call, delayMs) {
+  const gen = httpGen;
+  window.setTimeout(() => {
+    if (gen !== httpGen) return;
+    const empty = httpList.querySelector('.http-empty');
+    if (empty) empty.remove();
+    const card = document.createElement('details');
+    card.className = 'call enter';
+    const summary = document.createElement('summary');
+    const when = document.createElement('span');
+    when.className = 'when';
+    when.textContent = stamp(call.at);
+    const method = document.createElement('span');
+    method.className = 'method ' + String(call.method || '').toLowerCase();
+    method.textContent = call.method;
+    const path = document.createElement('span');
+    path.className = 'path';
+    path.textContent = call.path;
+    path.title = call.path;
+    const status = document.createElement('span');
+    status.className = 'st ' + (call.status >= 400 ? 'bad' : call.status >= 300 ? 'warn' : 'ok');
+    status.textContent = String(call.status);
+    summary.append(when, method, path);
+    if (call.service === 'anthropic') {
+      const llm = document.createElement('span');
+      llm.className = 'llm';
+      llm.textContent = 'LLM';
+      summary.appendChild(llm);
+    }
+    const toolNames = (call.tools && call.tools.length) ? call.tools : (call.tool ? [call.tool] : []);
+    toolNames.forEach((name) => {
+      const tool = document.createElement('span');
+      tool.className = 'tool';
+      tool.textContent = name;
+      summary.appendChild(tool);
+    });
+    summary.appendChild(status);
+    const body = document.createElement('div');
+    body.className = 'body';
+    const svc = document.createElement('div');
+    svc.className = 'svc';
+    svc.textContent = `${call.service} · ${stamp(call.at)}`;
+    body.appendChild(svc);
+    for (const label of ['request', 'response']) {
+      const sec = document.createElement('div');
+      sec.className = 'sec';
+      sec.textContent = label;
+      body.appendChild(sec);
+      body.appendChild(jsonNode(call[label], 0));
+    }
+    card.append(summary, body);
+    httpList.appendChild(card);
+    httpList.scrollTop = httpList.scrollHeight;
+  }, delayMs);
+}
+
+async function pullHttp() {
+  const r = await fetch(`/api/http?after=${httpAfter}`);
+  if (!r.ok) return;
+  const data = await r.json();
+  if (typeof data.last === 'number' && data.last < httpAfter) {
+    httpAfter = 0;
+    return;
+  }
+  const fresh = [];
+  for (const call of data.calls || []) {
+    if (call.id > httpAfter) {
+      httpAfter = call.id;
+      fresh.push(call);
+    }
+  }
+  const step = fresh.length > 6 ? 45 : 110;
+  fresh.forEach((call, i) => addHttpCall(call, 160 + i * step));
+}
+
+document.getElementById('http-clear').addEventListener('click', async () => {
+  httpGen += 1;
+  await post('/api/http/clear', {});
+  httpAfter = 0;
+  httpList.innerHTML = '<div class="http-empty">Calls show up here.</div>';
+});
+
+refresh().then(() => {
+  pullHttp();
+  if (!accountLocked && !shownPlanId) {
+    speak("Hey 👋 I can pay a supplier, show balances, pull a transfer, or cancel one.\n\nWho should I help you with?");
+  }
+});
+setInterval(pullHttp, 1000);
+</script>
+</body>
+</html>
